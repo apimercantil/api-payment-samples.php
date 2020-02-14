@@ -1,129 +1,91 @@
 <?php
 
-namespace App;
-
-use Illuminate\Database\Eloquent\Model;
-
-class AesCipher extends Model
-{
-    protected $key;
-    protected $data;
-    protected $method;
+class AesCipher {
+    
+    private const OPENSSL_CIPHER_NAME = "aes-128-ecb";
+    private const CIPHER_KEY_LEN = 16; //128 bits       
     /**
-     * Available OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING
-     *
-     * @var type $options
-     */
-    protected $options = 0;
-    /**
-     * 
-     * @param type $data
-     * @param type $key
-     * @param type $blockSize
-     * @param type $mode
-     */
-    function __construct($data = null, $key = null, $blockSize = null, $mode = 'CBC') {
-        $this->setData($data);
-        $this->setKey($key);
-        $this->setMethode($blockSize, $mode);
+    * Encripta datos en AES ECB de 128 bit key
+    * 
+    * @param type $keybank - Clave enviada 
+    * @return keybankhash Hash en sha 256 de la clave enviada por el banco
+    */
+    static function createKeyhash($keybank) {
+        $keybankhash = hash("sha256", $keybank, true);        
+        # return substr($keybankhash, 0, 16);
+        return $keybankhash;
     }
     /**
-     * 
-     * @param type $data
-     */
-    public function setData($data) {
-        $this->data = $data;
-    }
-    /**
-     * 
-     * @param type $key
-     */
-    public function setKey($key) {
-        $myhash = hash("sha256", $key, true);
+    * Selecciona los primeros 16 byte del hash de la clave
+    * 
+    * @param type $key - Hash en sha 256 de la clave enviada por el banco
+    * @return key 16 bytes de del hash de la clave enviada por el Banco
+    */
+    private static function fixKey($key) {
         
-        $this->key = substr($myhash, 0, 16);
+        if (strlen($key) < AesCipher::CIPHER_KEY_LEN) {
+            //0 pad to len 16
+            return str_pad("$key", AesCipher::CIPHER_KEY_LEN, "0"); 
+        }
+        
+        if (strlen($key) > AesCipher::CIPHER_KEY_LEN) {
+            //truncate to 16 bytes
+            return substr($key, 0, AesCipher::CIPHER_KEY_LEN); 
+        }
+
+        return $key;
     }
     /**
-     * CBC 128 192 256 
-      CBC-HMAC-SHA1 128 256
-      CBC-HMAC-SHA256 128 256
-      CFB 128 192 256
-      CFB1 128 192 256
-      CFB8 128 192 256
-      CTR 128 192 256
-      ECB 128 192 256
-      OFB 128 192 256
-      XTS 128 256
-     * @param type $blockSize
-     * @param type $mode
-     */
-    public function setMethode($blockSize, $mode = 'CBC') {
-        if($blockSize==192 && in_array('', array('CBC-HMAC-SHA1','CBC-HMAC-SHA256','XTS'))){
-            $this->method=null;
-             throw new Exception('Invlid block size and mode combination!');
-        }
-        $this->method = 'AES-' . $blockSize . '-' . $mode;
+    * Encripta datos en AES ECB de 128 bit key
+    * 
+    * @param type $key - Clave enviada por el banco debe ser de 16 bytes en sha-256
+    * @param type $data - Datos a ser cifrados
+    * @return encrypted Datos cifrados
+    */
+    static function encrypt($key, $data) {
+
+        $encodedEncryptedData = base64_encode(openssl_encrypt($data, AesCipher::OPENSSL_CIPHER_NAME, AesCipher::fixKey($key), OPENSSL_PKCS1_PADDING));
+        return $encodedEncryptedData;
+        
     }
     /**
-     * 
-     * @return boolean
-     */
-    public function validateParams() {
-        if ($this->data != null &&
-                $this->method != null ) {
-            return true;
-        } else {
-            return FALSE;
-        }
+    * Desencripta datos en AES ECB de 128 bit key
+    * 
+    * @param type $key - Clave enviada por el banco debe ser de 16 bytes en sha-256
+    * @param type $data - Datos a ser cifrados
+    * @return decrypted Datos Desencriptados
+    */
+    static function decrypt($key, $data) {
+        $decryptedData = openssl_decrypt(base64_decode($data), AesCipher::OPENSSL_CIPHER_NAME, AesCipher::fixKey($key), OPENSSL_PKCS1_PADDING);
+        return $decryptedData;
     }
-//it must be the same when you encrypt and decrypt
-     protected function getIV() {
-         // return '1234567890123456';
-         //return mcrypt_create_iv(mcrypt_get_iv_size($this->cipher, $this->mode), MCRYPT_RAND);
-         return openssl_random_pseudo_bytes(openssl_cipher_iv_length($this->method));
-         
-     }
-    /**
-     * @return type
-     * @throws Exception
-     */
-    public function encrypt() {
-        if ($this->validateParams()) { 
-            
-            return trim(openssl_encrypt($this->data, $this->method, $this->key, $this->options,$this->getIV()));
-        } else {
-            throw new Exception('Invlid params!');
-        }
-    }
-    /**
-     * 
-     * @return type
-     * @throws Exception
-     */
-    public function decrypt() {
-        if ($this->validateParams()) {
-            
-           $ret=openssl_decrypt($this->data, $this->method, $this->key, $this->options,$this->getIV());
-          
-           return   trim($ret); 
-        } else {
-            throw new Exception('Invlid params!');
-        }
-    }
-}
+};
+/**
+ *  
+ * Ejemplo para cifrar y descifrar datos intercambios 
+ * pos los API de Mercantil Banco 
+ * 
+ *
+*/
+const OPENSSL_CIPHER_NAME = "aes-128-ecb";
+echo "Genera del CVV y la clave telefonica cifrada\n";
 
-function testEncrypt(){
+# CVV a Encripta
+$cvv  = mb_convert_encoding("752", "UTF-8");
 
-    $secretKey = "A9279120481620090622AA30";
-    $text = "clavetelefonica";
-    $enviadoMercantil = "Jd2EZD3KdoP1i6xdlMFbBg==";
-    $aesCipher = new AesCipher($text, $secretKey, 256);
-    $encrypt = $aesCipher->encrypt();
-    $aesCipher = new AesCipher($enviadoMercantil, $secretKey, 256);
-    $decryptMercantil = $aesCipher->decrypt();
+# Clave secreta enviada por el Banco
+$keybank = mb_convert_encoding("A9279120481620090622AA30", "UTF-8");
 
-    print "encrypt $encrypt";
-    print "decryptMercantil $decryptMercantil";
-}
+# Generacion del hash a partir de la clave secreta del banco
+$keyhash = AesCipher::createKeyhash($keybank);
 
-testEncrypt();
+# Encripta el CVV
+$cvvencrypt = AesCipher::encrypt($keyhash,$cvv);
+
+# Des-Encripta
+$decrypted = AesCipher::decrypt($keyhash,$cvvencrypt);
+
+echo "CVV utilizado     : $cvv\n";
+echo "CVV Encriptado    : $cvvencrypt\n";
+echo "CVV Des-Encriptado: $decrypted\n";
+?>
