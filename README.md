@@ -28,4 +28,4 @@ extension=openssl
 
 ## Authors
 
-* **Mercantil Banco** - *Initial work* - [PurpleBooth](https://www.mercantilbanco.com)
+* **Mercantil Banco** - *API's de pago* - [Mercantil Banco CA](https://www.mercantilbanco.com)
