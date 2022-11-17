@@ -42,7 +42,7 @@ from Crypto.Util.Padding import pad, unpad
 
 __author__    = "Yoel Monsalve | yoel@vditech.us"
 __date__      = "2022-11-16"
-__modified__  = "2022-11-16"
+__modified__  = "2022-11-17"
 __version__   = ""
 
 
@@ -106,8 +106,6 @@ class AesCipher:
 	def encrypt(key=b'\0', data=''):
 		"""Encripta mensaje en AES ECB 128 bits
 		
-		[description]
-		
 		Args:
 			key (bytes): hash SHA256 de la clave enviada por el banco. Debe 
 			              truncar el hash a 16 bytes de longitud.
@@ -127,3 +125,28 @@ class AesCipher:
 		msg_encrypted = cipher.encrypt(msg)
 		
 		return b64encode(msg_encrypted)
+
+	def decrypt(key=b'\0', data_enc=''):
+		"""Desencripta el mensaje previamente cifrado en AES ECB 128 bits
+		
+		Args:
+			key (bytes): hash SHA256 de la clave enviada por el banco. Debe 
+			              truncar el hash a 16 bytes de longitud.
+			data_enc (bytes): data cifrada, y encodificada base64
+
+		Returns:
+            str: data descifrada, en texto plano
+		"""
+
+		# ajustar la clave a 16 bytes
+		key = AesCipher.fixKey(key)
+		# objeto encriptador
+		cipher = AES.new(key, AES.MODE_ECB)
+		# mensaje descifrado
+		msg = cipher.decrypt(b64decode(data_enc))
+		# des-rellenar el mensaje, para alinear con el tama~no de bloque
+		msg = unpad(msg, AES.block_size)
+		# y pasar de bytes a str
+		msg = msg.decode('utf-8')
+		
+		return msg

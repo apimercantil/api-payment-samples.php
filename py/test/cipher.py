@@ -6,7 +6,7 @@ que se devuelve el original.
 """
 __author__    = "Yoel Monsalve | yoel@vditech.us"
 __date__      = "2022-11-16"
-__modified__  = "2022-11-16"
+__modified__  = "2022-11-17"
 __version__   = ""
 
 import sys
@@ -38,7 +38,8 @@ keybank = 'A9279120481620090622AA30'
 keyhash = AesCipher.createKeyHash(keybank);
 
 cvv_encrypted = AesCipher.encrypt(keyhash, cvv)
+cvv_decrypted = AesCipher.decrypt(keyhash, cvv_encrypted)
 
-print(f'CVV utilizado:      {cvv}')
-print(f'CVV encryptado:     {cvv_encrypted}')
-#print(f'CVV des-encryptado: {cvv_decrypted}')
+print(f'CVV utilizado     : {cvv}')
+print(f'CVV encryptado    : {cvv_encrypted}')
+print(f'CVV des-encryptado: {cvv_decrypted}')
